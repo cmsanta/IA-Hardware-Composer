@@ -52,6 +52,16 @@
 
 namespace hwcomposer {
 
+static void page_flip_event(int /*fd*/, unsigned int frame, unsigned int sec,
+                            unsigned int usec, void *data) {
+}
+
+static void vblank_event(int /*fd*/, unsigned int /*frame*/,
+                         unsigned int /*sec*/, unsigned int /*usec*/,
+                         void * /*data*/) {
+  IPAGEFLIPEVENTTRACE("vblank_event Called.");
+}
+
 class GpuDevice::DisplayManager : public HWCThread {
  public:
   DisplayManager();
@@ -210,7 +220,8 @@ bool GpuDevice::DisplayManager::Init(uint32_t fd) {
 #endif
   FD_ZERO(&fd_set_);
   FD_SET(hotplug_fd_.get(), &fd_set_);
-  select_fd_ = hotplug_fd_.get() + 1;
+  FD_SET(fd_, &fd_set_);
+  select_fd_ = std::max(hotplug_fd_.get(), fd_) + 1;
   if (!InitWorker()) {
     ETRACE("Failed to initalizer thread to monitor Hot Plug events. %s",
            PRINTERROR());
@@ -312,6 +323,14 @@ void GpuDevice::DisplayManager::HandleRoutine() {
   } else if (FD_ISSET(0, &fd_set_)) {
     IHOTPLUGEVENTTRACE("select() exit due to user-input.");
   } else {
+    if (FD_ISSET(fd_, &fd_set_)) {
+      IHOTPLUGEVENTTRACE("drmHandleEvent recieved.");
+      drmEventContext event_context = {.version = DRM_EVENT_CONTEXT_VERSION,
+                                       .vblank_handler = vblank_event,
+                                       .page_flip_handler = page_flip_event};
+      drmHandleEvent(fd_, &event_context);
+    }
+
     if (FD_ISSET(hotplug_fd_.get(), &fd_set_)) {
       IHOTPLUGEVENTTRACE("Recieved Hot plug notification.");
       HotPlugEventHandler();

@@ -225,7 +225,7 @@ void DisplayQueue::HandleUpdateRequest(DisplayQueueItem& queue_item) {
 #ifdef DISABLE_OVERLAY_USAGE
     flags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
 #else
-    flags |= DRM_MODE_ATOMIC_NONBLOCK;
+    flags |= DRM_MODE_ATOMIC_NONBLOCK | DRM_MODE_PAGE_FLIP_EVENT;
 #endif
   }
 
