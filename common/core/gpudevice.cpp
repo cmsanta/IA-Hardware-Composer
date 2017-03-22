@@ -104,8 +104,6 @@ class GpuDevice::DisplayManager : public HWCThread {
   std::shared_ptr<DisplayHotPlugEventCallback> callback_ = NULL;
   int fd_ = -1;
   ScopedFd hotplug_fd_;
-  uint32_t select_fd_ = 0;
-  fd_set fd_set_;
   SpinLock spin_lock_;
 };
 
@@ -224,10 +222,8 @@ bool GpuDevice::DisplayManager::Init(uint32_t fd) {
     return true;
   }
 #endif
-  FD_ZERO(&fd_set_);
-  FD_SET(hotplug_fd_.get(), &fd_set_);
-  FD_SET(fd_, &fd_set_);
-  select_fd_ = std::max(hotplug_fd_.get(), fd_) + 1;
+  fd_handler_.AddFd(fd_);
+  fd_handler_.AddFd(hotplug_fd_.get());
   if (!InitWorker()) {
     ETRACE("Failed to initalizer thread to monitor Hot Plug events. %s",
            PRINTERROR());
@@ -314,33 +310,25 @@ void GpuDevice::DisplayManager::HotPlugEventHandler() {
 #endif
 
 void GpuDevice::DisplayManager::HandleWait() {
+  fd_handler_.Poll(-1);
 }
 
 void GpuDevice::DisplayManager::HandleRoutine() {
   CTRACE();
   int ret;
   IHOTPLUGEVENTTRACE("DisplayManager::Routine.");
-  do {
-    ret = select(select_fd_, &fd_set_, NULL, NULL, NULL);
-  } while (ret == -1 && errno == EINTR);
 
-  if (ret < 0) {
-    IHOTPLUGEVENTTRACE("select() failed with %s:", PRINTERROR());
-  } else if (FD_ISSET(0, &fd_set_)) {
-    IHOTPLUGEVENTTRACE("select() exit due to user-input.");
-  } else {
-    if (FD_ISSET(fd_, &fd_set_)) {
-      IHOTPLUGEVENTTRACE("drmHandleEvent recieved.");
-      drmEventContext event_context = {.version = DRM_EVENT_CONTEXT_VERSION,
-                                       .vblank_handler = vblank_event,
-                                       .page_flip_handler = page_flip_event};
-      drmHandleEvent(fd_, &event_context);
-    }
+  if (fd_handler_.IsReady(fd_)) {
+    IHOTPLUGEVENTTRACE("drmHandleEvent recieved.");
+    drmEventContext event_context = {.version = DRM_EVENT_CONTEXT_VERSION,
+                                     .vblank_handler = vblank_event,
+                                     .page_flip_handler = page_flip_event};
+    drmHandleEvent(fd_, &event_context);
+  }
 
-    if (FD_ISSET(hotplug_fd_.get(), &fd_set_)) {
-      IHOTPLUGEVENTTRACE("Recieved Hot plug notification.");
-      HotPlugEventHandler();
-    }
+  if (fd_handler_.IsReady(hotplug_fd_.get())) {
+    IHOTPLUGEVENTTRACE("Recieved Hot plug notification.");
+    HotPlugEventHandler();
   }
 }
 
