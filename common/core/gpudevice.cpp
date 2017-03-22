@@ -46,6 +46,7 @@
 #include "drmscopedtypes.h"
 #include "headless.h"
 #include "hwcthread.h"
+#include "pageflipeventdata.h"
 #include "pageflipeventhandler.h"
 #include "spinlock.h"
 #include "virtualdisplay.h"
@@ -54,6 +55,11 @@ namespace hwcomposer {
 
 static void page_flip_event(int /*fd*/, unsigned int frame, unsigned int sec,
                             unsigned int usec, void *data) {
+  PageFlipEventData *event_data = static_cast<PageFlipEventData *>(data);
+  if (!event_data)
+    return;
+
+  delete event_data;
 }
 
 static void vblank_event(int /*fd*/, unsigned int /*frame*/,

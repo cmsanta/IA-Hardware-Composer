@@ -26,6 +26,7 @@
 #include "hwctrace.h"
 #include "hwcutils.h"
 #include "overlaylayer.h"
+#include "pageflipeventdata.h"
 #include "pageflipeventhandler.h"
 
 namespace hwcomposer {
@@ -273,8 +274,14 @@ void DisplayQueue::HandleUpdateRequest(DisplayQueueItem& queue_item) {
     GetFence(pset.get(), &fence);
   }
 
+  PageFlipEventData* data = NULL;
+
+  if (previous_layers_.size() > 0) {
+    data = new PageFlipEventData(previous_layers_);
+  }
+
   if (!display_plane_manager_->CommitFrame(current_composition_planes,
-                                           pset.get(), flags)) {
+                                           pset.get(), flags, data)) {
     return;
   }
 

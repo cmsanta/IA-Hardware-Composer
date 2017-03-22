@@ -274,8 +274,8 @@ std::tuple<bool, DisplayPlaneStateList> DisplayPlaneManager::ValidateLayers(
 }
 
 bool DisplayPlaneManager::CommitFrame(const DisplayPlaneStateList &comp_planes,
-                                      drmModeAtomicReqPtr pset,
-                                      uint32_t flags) {
+                                      drmModeAtomicReqPtr pset, uint32_t flags,
+                                      PageFlipEventData *data) {
   CTRACE();
   if (!pset) {
     ETRACE("Failed to allocate property set %d", -ENOMEM);
@@ -303,7 +303,7 @@ bool DisplayPlaneManager::CommitFrame(const DisplayPlaneStateList &comp_planes,
     (*i)->Disable(pset);
   }
 
-  int ret = drmModeAtomicCommit(gpu_fd_, pset, flags, NULL);
+  int ret = drmModeAtomicCommit(gpu_fd_, pset, flags, data);
   if (ret) {
     if (ret == -EBUSY) {
       /* FIXME - In case of EBUSY, we spin until succeed. What we
@@ -311,7 +311,7 @@ bool DisplayPlaneManager::CommitFrame(const DisplayPlaneStateList &comp_planes,
        */
       ret = -EBUSY;
       while (ret == -EBUSY)
-        ret = drmModeAtomicCommit(gpu_fd_, pset, flags, NULL);
+        ret = drmModeAtomicCommit(gpu_fd_, pset, flags, data);
     }
   }
 

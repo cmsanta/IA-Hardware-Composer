@@ -31,6 +31,7 @@
 #include "nativesync.h"
 
 #include "displayplanestate.h"
+#include "pageflipeventdata.h"
 
 namespace hwcomposer {
 
@@ -57,7 +58,8 @@ class DisplayPlaneManager {
       const DisplayPlaneStateList &previous_planes_state, bool pending_modeset);
 
   bool CommitFrame(const DisplayPlaneStateList &planes,
-                   drmModeAtomicReqPtr property_set, uint32_t flags);
+                   drmModeAtomicReqPtr property_set, uint32_t flags,
+                   PageFlipEventData *data);
 
   void DisablePipe(drmModeAtomicReqPtr property_set);
 
