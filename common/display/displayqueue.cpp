@@ -276,12 +276,19 @@ void DisplayQueue::HandleUpdateRequest(DisplayQueueItem& queue_item) {
 
   PageFlipEventData* data = NULL;
 
-  if (previous_layers_.size() > 0) {
+  if (!(flags & DRM_MODE_ATOMIC_ALLOW_MODESET) && previous_layers_.size() > 0) {
     data = new PageFlipEventData(previous_layers_);
+    // Lets ensure the job associated with previous frame
+    // has been done, else commit will fail with -EBUSY.
+    if (out_fence_.get() > 0) {
+      HWCPoll(out_fence_.get(), -1);
+      out_fence_.Reset(-1);
+    }
   }
 
   if (!display_plane_manager_->CommitFrame(current_composition_planes,
                                            pset.get(), flags, data)) {
+    delete data;
     return;
   }
 
@@ -294,11 +301,7 @@ void DisplayQueue::HandleUpdateRequest(DisplayQueueItem& queue_item) {
   compositor_.InsertFence(fence);
 #else
   if (fence > 0) {
-    if (previous_layers_.size() > 0) {
-      HWCPoll(fence, -1);
-    }
-
-    close(fence);
+    out_fence_.Reset(fence);
   }
 #endif
   previous_layers_.swap(queue_item.layers_);
@@ -355,6 +358,7 @@ void DisplayQueue::HandleExit() {
   previous_plane_state_.clear();
   std::queue<DisplayQueueItem>().swap(queue_);
   compositor_.Reset();
+  out_fence_.Reset(-1);
 }
 
 void DisplayQueue::GetDrmObjectProperty(const char* name,

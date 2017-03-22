@@ -18,6 +18,7 @@
 #define COMMON_DISPLAY_PAGEFLIPEVENTDATA_H_
 
 #include <memory>
+#include <vector>
 
 #include "nativesync.h"
 #include "overlaylayer.h"

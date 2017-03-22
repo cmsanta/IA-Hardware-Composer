@@ -91,6 +91,7 @@ class DisplayQueue : public HWCThread {
   SpinLock spin_lock_;
   SpinLock display_queue_;
   std::queue<DisplayQueueItem> queue_;
+  ScopedFd out_fence_;
   std::vector<OverlayLayer> previous_layers_;
   DisplayPlaneStateList previous_plane_state_;
 };
