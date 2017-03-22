@@ -254,8 +254,6 @@ void DisplayQueue::HandleUpdateRequest(DisplayQueueItem& queue_item) {
     }
   }
 
-  // Do the actual commit.
-  bool succesful_commit = true;
   uint64_t fence = 0;
   // Do the actual commit.
   ScopedDrmAtomicReqPtr pset(drmModeAtomicAlloc());
